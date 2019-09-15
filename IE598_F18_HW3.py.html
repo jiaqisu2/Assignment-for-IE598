@@ -1,0 +1,137 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[10]:
+
+
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+
+df = pd.read_csv('file:///Users/sujiaqi/Desktop/data.csv')
+df.head()
+sns.set()
+
+print('Liquidity Score of all companies')
+sns.swarmplot(y = 'Industry', x = 'LiquidityScore', data = df)
+plt.gcf().set_size_inches(10, 10)
+plt.xlabel('Industry')
+plt.ylabel('Liquidity Score')
+plt.show()
+
+print('ECDF of four types of companies') 
+ECDF_liquidityscore = np.array(['Electric', 'Healthcare-Services', 'Iron/Steel', 'Insurance'])
+ECDF_industry = np.array(df['Industry'])
+ECDF_index_record = np.array([])
+for i in range(0,ECDF_liquidityscore.shape[0]):
+    ECDF_index_record = np.append(ECDF_index_record, np.where(ECDF_industry == ECDF_liquidityscore[i]))
+ECDF_data = pd.DataFrame(df.loc[ECDF_index_record,['LiquidityScore','Industry']])
+ECDF_data = ECDF_data.reset_index()
+ECDF_data = ECDF_data.drop('index',axis=1)
+
+def ecdf(data):
+    """Compute ECDF for a one-dimensional array of measurements."""
+    # Number of data points: n
+    n = len(data)
+
+    # x-data for the ECDF: x
+    x = np.sort(data)
+
+    # y-data for the ECDF: y
+    y = np.arange(1, n+1) / n
+
+    return x, y
+
+x_ele, y_ele = ecdf(np.array(NDL[NDL['Industry']=='Electric']['LiquidityScore']))
+x_HCS, y_HCS = ecdf(np.array(NDL[NDL['Industry']=='Healthcare-Services']['LiquidityScore']))
+x_IS, y_IS = ecdf(np.array(NDL[NDL['Industry']=='Iron/Steel']['LiquidityScore']))
+x_Ins, y_Ins = ecdf(np.array(NDL[NDL['Industry']=='Insurance']['LiquidityScore']))
+
+plt.plot(x_ele, y_ele, marker = '.', linestyle = 'none')
+plt.plot(x_HCS, y_HCS, marker = '.', linestyle = 'none')
+plt.plot(x_IS, y_IS, marker = '.', linestyle = 'none')
+plt.plot(x_Ins, y_Ins, marker = '.', linestyle = 'none')
+
+plt.xlabel("Liquidity Score")
+plt.ylabel("ECDF")
+plt.show()
+
+
+print('Liquidityscore boxplot')
+sns.boxplot(x = 'Industry', y = 'LiquidityScore', data = ECDF_data)
+plt.gcf().set_size_inches(10,10)
+plt.xlabel('Industry')
+plt.ylabel('LiquidityScore')
+plt.show()
+
+
+print('Quantetitive methods of intra dealer and uncapped percent:\n')
+mean_intra_percent = np.mean(df['percent_intra_dealer'])
+mean_uncapped_percent = np.mean(df['percent_uncapped'])
+median_intra_percent = np.median(df['percent_intra_dealer'])
+median_uncapped_percent = np.median(df['percent_uncapped'])
+var_intra_percent = np.var(df['percent_intra_dealer'])
+var_uncapped_percent = np.var(df['percent_uncapped'])
+print('mean of percent of intra dealer is '+ str(mean_intra_percent))
+print('mean of percent of uncapped is ' + str(mean_uncapped_percent))
+print('median of percent of intra dealer is '+ str(median_intra_percent))
+print('median of percent of uncapped is ' + str(median_uncapped_percent))
+print('var of percent of intra dealer is '+ str(var_intra_percent))
+print('var of percent of uncapped is ' + str(var_uncapped_percent))
+
+print('\n')
+print('\nTry to find retionship between client trade percentage and trade volume')
+print('Relationship between client trade percentage and weekly mean volume:')
+plt.plot(df['Client_Trade_Percentage'], df['weekly_mean_volume'], marker = '.', linestyle = 'none')
+plt.gcf().set_size_inches(10, 10)
+plt.xlabel('Client Trade Percentage')
+plt.ylabel('Weekly Mean Volume')
+plt.show()
+print('Relationship between client trade percentage and weekly median volume:')
+plt.plot(df['Client_Trade_Percentage'], df['weekly_median_volume'], marker = '.', linestyle = 'none')
+plt.gcf().set_size_inches(10, 10)
+plt.xlabel('Client Trade Percentage')
+plt.ylabel('Weekly Median Volume')
+plt.show()
+
+print("My name is {Jiaqi Su}")
+print("My NetID is: {jiaqisu2}")
+print("I hereby certify that I have read the University policy on Academic Integrity and that I am not in violation.")
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
