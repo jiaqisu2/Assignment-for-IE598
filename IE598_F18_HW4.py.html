@@ -1,0 +1,297 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[114]:
+
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import r2_score
+from sklearn.linear_model import Ridge
+from sklearn.linear_model import Lasso
+from sklearn.linear_model import ElasticNet
+
+df = pd.read_csv('/Users/sujiaqi/Desktop/Machine Learning/assignment4/house2.csv')
+df = df.drop(columns = ['ATT1', 'ATT2', 'ATT3', 'ATT4', 'ATT5', 'ATT6', 'ATT7', 'ATT8', 'ATT9', 'ATT10', 'ATT11', 'ATT12', 'ATT13'])
+df = df[np.isfinite(df['MEDV'])]
+df.head()
+
+#create the scatterplot matrix
+cols = ['LSTAT', 'INDUS', 'NOX', 'RM', 'MEDV']
+sns.pairplot(df[cols], height=2.5)
+plt.tight_layout()
+plt.show()
+
+#plot the correlation matrix array as a heat map
+cm = np.corrcoef(df[cols].values.T)
+sns.set(font_scale=1.5)
+sns.heatmap(cm,
+            cbar=True,
+            annot=True,
+            square=True,
+            fmt='.2f',
+            annot_kws={'size': 15},
+            yticklabels=cols,
+            xticklabels=cols)
+plt.show()
+
+#first linear regression model
+class LinearRegressionGD(object):
+
+    def __init__(self, eta=0.001, n_iter=20):
+        self.eta = eta
+        self.n_iter = n_iter
+
+    def fit(self, X, y):
+        self.w_ = np.zeros(1 + X.shape[1])
+        self.cost_ = []
+
+        for i in range(self.n_iter):
+            output = self.net_input(X)
+            errors = (y - output)
+            self.w_[1:] += self.eta * X.T.dot(errors)
+            self.w_[0] += self.eta * errors.sum()
+            cost = (errors**2).sum() / 2.0
+            self.cost_.append(cost)
+        return self
+
+    def net_input(self, X):
+        return np.dot(X, self.w_[1:]) + self.w_[0]
+
+    def predict(self, X):
+        return self.net_input(X)
+
+#standardize the variables for better convergence of the GD algorithm
+X = df[['RM']].values
+y = df['MEDV'].values
+sc_x = StandardScaler()
+sc_y = StandardScaler()
+X_std = sc_x.fit_transform(X)
+y_std = sc_y.fit_transform(y[:, np.newaxis]).flatten()
+lr = LinearRegressionGD()
+lr.fit(X_std, y_std)
+
+#plot the cost as a function of the number of epochs passes over the training dataset
+plt.plot(range(1, lr.n_iter+1), lr.cost_)
+plt.ylabel('SSE')
+plt.xlabel('Epoch')
+# plt.tight_layout()
+# plt.savefig('./figures/cost.png', dpi=300)
+plt.show()
+
+#plot a scatterplot of the training samples and add the regression line
+def lin_regplot(X, y, model): #helper func
+    plt.scatter(X, y, c='steelblue', edgecolor='white', s=70)
+    plt.plot(X, model.predict(X), color='black', lw=2)
+    return None
+
+#plot the number of rooms against house price
+lin_regplot(X_std, y_std, lr)
+plt.xlabel('Average number of rooms [RM] (standardized)')
+plt.ylabel('Price in $1000s [MEDV] (standardized)')
+plt.show()
+print('Slope: %.3f' % lr.w_[1])
+print('Intercept: %.3f' % lr.w_[0])
+
+#scale the predicted price outcome back onto the Price in $1000s axis
+num_rooms_std = sc_x.transform(np.array([[5.0]]))
+price_std = lr.predict(num_rooms_std)
+print("Price in $1000's: %.3f" % sc_y.inverse_transform(price_std))
+
+#print the weights
+print('Slope: %.3f' % lr.w_[1])
+print('Intercept: %.3f' % lr.w_[0])
+
+#linearReegression
+slr = LinearRegression()
+slr.fit(X, y)
+y_pred = slr.predict(X)
+print('Slope: %.3f' % slr.coef_[0])
+print('Intercept: %.3f' % slr.intercept_)
+
+#plot MEDV against RM
+lin_regplot(X, y, slr)
+plt.xlabel('Average number of rooms [RM] (standardized)')
+plt.ylabel('Price in $1000s [MEDV] (standardized)')
+plt.show()
+
+# adding a column vector of "ones"
+Xb = np.hstack((np.ones((X.shape[0], 1)), X))
+w = np.zeros(X.shape[1])
+z = np.linalg.inv(np.dot(Xb.T, Xb))
+w = np.dot(z, np.dot(Xb.T, y))
+print('Slope: %.3f' % w[1])
+print('Intercept: %.3f' % w[0])
+
+#ransac
+ransac = RANSACRegressor(LinearRegression(),
+                          max_trials=100,
+                          min_samples=50,
+                          loss='absolute_loss',
+                          residual_threshold=5.0,
+                          random_state=0)
+ransac.fit(X, y)
+
+inlier_mask = ransac.inlier_mask_
+outlier_mask = np.logical_not(inlier_mask)
+line_X = np.arange(3, 10, 1)
+line_y_ransac = ransac.predict(line_X[:, np.newaxis])
+plt.scatter(X[inlier_mask], y[inlier_mask],
+             c='steelblue', edgecolor='white',
+             marker='o', label='Inliers')
+plt.scatter(X[outlier_mask], y[outlier_mask],
+             c='limegreen', edgecolor='white',
+             marker='s', label='Outliers')
+plt.plot(line_X, line_y_ransac, color='black', lw=2)
+plt.xlabel('Average number of rooms [RM]')
+plt.ylabel('Price in $1000s [MEDV]')
+plt.legend(loc='upper left')
+plt.show()
+
+print('Slope: %.3f' % ransac.estimator_.coef_[0])
+print('Intercept: %.3f' % ransac.estimator_.intercept_)
+
+#linear regression models evaluation
+X = df.iloc[:, :-1].values
+y = df['MEDV'].values
+X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42)
+slr = LinearRegression()
+slr.fit(X_train, y_train)
+y_train_pred = slr.predict(X_train)
+y_test_pred = slr.predict(X_test)
+
+plt.scatter(y_train_pred,  y_train_pred - y_train,
+            c='blue', marker='o', edgecolor='white',
+            label='Training data')
+plt.scatter(y_test_pred,  y_test_pred - y_test,
+            c='green', marker='s', edgecolor='white',
+            label='Test data')
+plt.xlabel('Predicted values')
+plt.ylabel('Residuals')
+plt.legend(loc='upper left')
+plt.hlines(y=0, xmin=-10, xmax=50, color='black', lw=2)
+plt.xlim([-10, 50])
+plt.title('Linear Regression Residual Error')
+plt.show()
+
+print('Slope:' + str(slr.coef_))
+print('y Intercept:' + str(slr.intercept_))
+print('Ridge coefficients:' + str(slr.coef_))
+
+#MSE(linear regression)
+print('MSE train: %.3f, test: %.3f' % (
+      mean_squared_error(y_train, y_train_pred),
+      mean_squared_error(y_test, y_test_pred)))
+
+#R2(linear regression)
+print('R^2 train: %.3f, test: %.3f' %
+      (r2_score(y_train, y_train_pred),
+       r2_score(y_test, y_test_pred)))
+
+#Ridge
+alpha_space_ridge = [0.0001, 0.001, 0.01, 0.1, 1]
+X = df.iloc[:, :-1].values
+y = df['MEDV'].values
+for al_ridge in alpha_space_ridge:
+    ridge = Ridge(alpha=al_ridge, normalize=True)
+    ridge.fit(X_train, y_train)
+    y_train_pred = ridge.predict(X_train)
+    y_test_pred = ridge.predict(X_test)
+    
+    plt.scatter(y_train_pred,  y_train_pred - y_train,
+                c='steelblue', marker='o', edgecolor='white',
+                label='Training data')
+    plt.scatter(y_test_pred,  y_test_pred - y_test,
+                c='limegreen', marker='s', edgecolor='white',
+                label='Test data')
+    plt.xlabel('Predicted values')
+    plt.ylabel('Residuals')
+    plt.legend(loc='upper left')
+    plt.hlines(y=0, xmin=-10, xmax=50, color='black', lw=2)
+    plt.xlim([-10, 50])
+    plt.title('Ridge Residual Error(alpha = ' + str(al_ridge) + ')')
+    plt.show()
+    
+    print('Slope:' + str(ridge.coef_))
+    print('y Intercept:' + str(ridge.intercept_))
+    print('Ridge coefficients:' + str(ridge.coef_))
+    
+    #MSE(Ridge regression)
+    print('MSE train: %.3f, test: %.3f' % (
+            mean_squared_error(y_train, y_train_pred),
+            mean_squared_error(y_test, y_test_pred)))
+    
+    #R2(Ridge regression)
+    print('R^2 train: %.3f, test: %.3f' % (
+            r2_score(y_train, y_train_pred),
+            r2_score(y_test, y_test_pred)))
+
+
+#Lasso
+alpha_space_lasso = [0.0001, 0.001, 0.01, 0.1, 1]
+X = df.iloc[:, :-1].values
+y = df['MEDV'].values
+for al_lasso in alpha_space_lasso:
+    lasso = Lasso(alpha=al_lasso, normalize=True)
+    lasso.fit(X_train, y_train)
+    y_train_pred = lasso.predict(X_train)
+    y_test_pred = lasso.predict(X_test)
+    
+    plt.scatter(y_train_pred,  y_train_pred - y_train,
+                c='steelblue', marker='o', edgecolor='white',
+                label='Training data')
+    plt.scatter(y_test_pred,  y_test_pred - y_test,
+                c='limegreen', marker='s', edgecolor='white',
+                label='Test data')
+    plt.xlabel('Predicted values')
+    plt.ylabel('Residuals')
+    plt.legend(loc='upper left')
+    plt.hlines(y=0, xmin=-10, xmax=50, color='black', lw=2)
+    plt.xlim([-10, 50])
+    plt.title('Lasso Residual Error(alpha = ' + str(al_lasso) + ')')
+    plt.show()
+
+    print('Slope:' + str(lasso.coef_))
+    print('y Intercept:' + str(lasso.intercept_))
+    print('Lasso coefficients:' + str(lasso.coef_))
+
+    #MSE(Lasso regression)
+    print('MSE train: %.3f, test: %.3f' % (
+        mean_squared_error(y_train, y_train_pred),
+        mean_squared_error(y_test, y_test_pred)))
+
+    #MSE(Lasso regression)
+    print('R^2 train: %.3f, test: %.3f' % (
+            r2_score(y_train, y_train_pred),
+            r2_score(y_test, y_test_pred)))
+
+print('\n')
+print("My name is Jiaqi Su")
+print("My NetID is: jiaqisu2")
+print("I hereby certify that I have read the University policy on Academic Integrity and that I am not in violation.")
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
