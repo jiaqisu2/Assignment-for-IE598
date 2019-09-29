@@ -22,6 +22,7 @@ df = df.dropna(how = 'any', axis = 0)
 df.head()
 
 #create the scatterplot matrix
+cols = ['SVENF01', 'SVENF02', 'SVENF03', 'SVENF04', 'Adj_Close']
 sns.pairplot(df[cols], height=2.5)
 plt.tight_layout()
 plt.show()
@@ -100,8 +101,8 @@ plt.show()
 cxv = pca.explained_variance_[0] + pca.explained_variance_[1] + pca.explained_variance_[2]
 print('The cumulative explained variance of the 3 component version is ' + str(cxv) + '.')
 
-print("My name is {type your name here}")
-print("My NetID is: {type your NetID here}")
+print("My name is Jiaqi Su")
+print("My NetID is: jiaqisu2")
 print("I hereby certify that I have read the University policy on Academic Integrity and that I am not in violation.")
 # In[ ]:
 
