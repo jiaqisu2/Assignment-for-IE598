@@ -1,0 +1,201 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[22]:
+
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import r2_score
+from sklearn.decomposition import PCA
+from sklearn.svm import SVR
+import time
+
+#read csv
+df = pd.read_csv('/Users/sujiaqi/Desktop/Machine Learning/assignment5/hw5_treasury_yield_curve_data.csv')
+df = df.drop(columns = ['Date'])
+df = df.dropna(how = 'any', axis = 0)
+df.head()
+
+#create the scatterplot matrix
+cols = ['SVENF01', 'SVENF02', 'SVENF03', 'SVENF04', 'Adj_Close']
+sns.pairplot(df[cols], height=2.5)
+plt.tight_layout()
+plt.show()
+
+#plot the correlation matrix array as a heat map
+cm = np.corrcoef(df[cols].values.T)
+sns.set(font_scale=1.5)
+sns.heatmap(cm,
+            cbar=True,
+            annot=True,
+            square=True,
+            fmt='.2f',
+            annot_kws={'size': 15},
+            yticklabels=cols,
+            xticklabels=cols)
+plt.show()
+
+#create X&y for all components
+X = df.iloc[:, :-1].values
+y = df['Adj_Close'].values
+X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.15, random_state=42)
+#standardize
+ss_x = StandardScaler()
+ss_y = StandardScaler()
+X_train = ss_x.fit_transform(X_train)
+X_test = ss_x.transform(X_test)
+y_train = ss_y.fit_transform(y_train.reshape(-1, 1))
+y_test = ss_y.transform(y_test.reshape(-1, 1))
+
+#linear regression for 30 treasures
+start = time.time()
+slr = LinearRegression()
+slr.fit(X_train, y_train)
+y_train_pred = slr.predict(X_train)
+y_test_pred = slr.predict(X_test)
+end = time.time()
+
+print('RMSE&R^2 under LR(all components):')
+#MSE(linear regression)
+print('RMSE train: %.3f, test: %.3f' % (
+      np.sqrt(mean_squared_error(y_train, y_train_pred)),
+      np.sqrt(mean_squared_error(y_test, y_test_pred))))
+
+#R2(linear regression)
+print('R^2 train: %.3f, test: %.3f' %
+      (r2_score(y_train, y_train_pred),
+       r2_score(y_test, y_test_pred)))
+print('runtime: ' + str(end - start) + 's')
+print('\n')
+
+#SVR for 30 treasures
+start = time.time()
+svr = SVR(kernel = 'linear')
+svr.fit(X_train, y_train.ravel())
+SVR_train_pred = svr.predict(X_train)
+SVR_test_pred = svr.predict(X_test)
+end = time.time()
+
+#MSE(SVR)
+print('RMSE&R^2 under SVR(all components):')
+print('RMSE train: %.3f, test: %.3f' % (
+      np.sqrt(mean_squared_error(y_train, SVR_train_pred)),
+      np.sqrt(mean_squared_error(y_test, SVR_test_pred))))
+
+#R2(SVR)
+print('R^2 train: %.3f, test: %.3f' %
+      (r2_score(y_train, SVR_train_pred),
+       r2_score(y_test, SVR_test_pred)))
+print('runtime: ' + str(end - start) + 's')
+
+#PCA for all components
+pca = PCA()
+pca.fit(X_train, y_train)
+features = range(pca.n_components_)
+plt.bar(features, pca.explained_variance_ratio_)
+plt.xticks(features)
+plt.ylabel('variance')
+plt.xlabel('PCA feature')
+plt.title('Variance of All Components')
+plt.xticks(fontsize = 8)
+plt.tight_layout()
+plt.show()
+cxv = pca.explained_variance_[0] + pca.explained_variance_[1] + pca.explained_variance_[2]
+print('The cumulative explained variance of the 3 component version is ' + str(cxv) + '.')
+
+#PCA for 3 components
+pca_3d = PCA(n_components = 3)
+pca_3d.fit(X_train, y_train)
+features = range(pca_3d.n_components_)
+plt.bar(features, pca_3d.explained_variance_ratio_)
+plt.xticks(features)
+plt.ylabel('variance')
+plt.xlabel('PCA feature')
+plt.title('Variance of 3 Components')
+plt.xticks(fontsize = 8)
+plt.tight_layout()
+plt.show()
+
+
+#create X&y for 3 components
+X_train_pca, X_test_pca, y_train, y_test = train_test_split(pca_3d.transform(X), y, test_size = 0.15, random_state = 42)
+#standardize
+ss_x = StandardScaler()
+ss_y = StandardScaler()
+X_train_pca = ss_x.fit_transform(X_train_pca)
+X_test_pca = ss_x.transform(X_test_pca)
+y_train = ss_y.fit_transform(y_train.reshape(-1, 1))
+y_test = ss_y.transform(y_test.reshape(-1, 1))
+
+#LR for PCA_3d
+start = time.time()
+slr = LinearRegression()
+slr.fit(X_train_pca, y_train)
+y_train_pred_pca = slr.predict(X_train_pca)
+y_test_pred_pca = slr.predict(X_test_pca)
+end = time.time()
+
+print('RMSE&R^2 under LR(PCA):')
+#MSE(linear regression)
+print('RMSE train: %.3f, test: %.3f' % (
+      np.sqrt(mean_squared_error(y_train, y_train_pred_pca)),
+      np.sqrt(mean_squared_error(y_test, y_test_pred_pca))))
+
+#R2(linear regression)
+print('R^2 train: %.3f, test: %.3f' %
+      (r2_score(y_train, y_train_pred_pca),
+       r2_score(y_test, y_test_pred_pca)))
+print('runtime: ' + str(end - start) + 's')
+print('\n')
+
+#SVR for PCA_3d
+start = time.time()
+svr = SVR(kernel = 'linear')
+svr.fit(X_train_pca, y_train.ravel())
+SVR_train_pred_pca = svr.predict(X_train_pca)
+SVR_test_pred_pca = svr.predict(X_test_pca)
+end = time.time()
+
+#MSE(SVR)
+print('RMSE&R^2 under SVR(PCA):')
+print('RMSE train: %.3f, test: %.3f' % (
+      np.sqrt(mean_squared_error(y_train, SVR_train_pred_pca)),
+      np.sqrt(mean_squared_error(y_test, SVR_test_pred_pca))))
+
+#R2(SVR)
+print('R^2 train: %.3f, test: %.3f' %
+      (r2_score(y_train, SVR_train_pred_pca),
+       r2_score(y_test, SVR_test_pred_pca)))
+print('runtime: ' + str(end - start) + 's')
+
+print('\n')
+print("My name is Jiaqi Su")
+print("My NetID is: jiaqisu2")
+print("I hereby certify that I have read the University policy on Academic Integrity and that I am not in violation.")
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
