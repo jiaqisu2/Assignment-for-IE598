@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[2]:
+
+
+import pandas as pd
+df = pd.read_csv('/Users/sujiaqi/Desktop/Machine Learning/assignment6/ccdefault.csv')
+df = df.drop('ID', axis = 1)
+df.head()
+
+
+# In[10]:
+
+
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score
+import time
+
+X = df.iloc[:, :-1].values
+y = df['DEFAULT'].values
+dt = DecisionTreeClassifier()
+inscores = []
+outscores = []
+
+start = time.time()
+for i in range(1,11):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=i)
+    dt.fit(X_train, y_train)
+    y_pred_test = dt.predict(X_test)
+    y_pred_train = dt.predict(X_train)
+    y_out_score = accuracy_score(y_test, y_pred_test)
+    y_in_score = accuracy_score(y_train, y_pred_train)
+    outscores.append(y_out_score)
+    inscores.append(y_in_score)
+    print('random_state =', i, '\n', 'Outscore:', y_out_score, '\n', 'Inscore:', y_in_score)
+end = time.time()
+print('running time:', end - start, 's')
+
+
+# In[5]:
+
+
+import numpy as np
+mean_out = np.mean(outscores)
+std_out = np.std(outscores)
+mean_in = np.mean(inscores)
+std_in = np.std(inscores)
+print('Mean of out-sample:', mean_out)
+print('Std of out-sample:', std_out)
+print('Mean of in-sample:', mean_in)
+print('Std of in-sample:', std_in)
+
+
+# In[11]:
+
+
+from sklearn.model_selection import cross_val_score
+
+dt = DecisionTreeClassifier()
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=1)
+dt.fit(X_train, y_train)
+y_pred_test = dt.predict(X_test)
+
+start = time.time()
+cv_scores = cross_val_score(dt, X, y, cv=10, scoring = 'accuracy')
+print('CV accuracy scores:')
+print(cv_scores)
+end = time.time()
+print('running time:', end - start, 's')
+
+mean_cv = np.mean(cv_scores)
+std_cv = np.std(cv_scores)
+print('Mean of cv_scores:', mean_cv)
+print('Std of cv_scores:', std_cv)
+
+score_out = accuracy_score(y_test, y_pred_test)
+print('Outscore:', score_out)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
