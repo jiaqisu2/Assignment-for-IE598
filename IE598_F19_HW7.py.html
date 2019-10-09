@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+import pandas as pd
+df = pd.read_csv('/Users/sujiaqi/Desktop/Machine Learning/assignment6/ccdefault.csv')
+df = df.drop('ID', axis = 1)
+df.head()
+
+
+# In[16]:
+
+
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+import numpy as np
+import time
+X = df.iloc[:, :-1].values
+y = df['DEFAULT'].values
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=1)
+for i in [1,5,10,15,20,25,30]:
+    start = time.time()
+    print('N_estimator =', i)
+    rfr = RandomForestClassifier(criterion='gini', n_estimators=i, random_state=1, n_jobs=2)
+    rfr.fit(X_train, y_train)
+    cv_scores = cross_val_score(rfr, X_train, y_train, cv=10, scoring='accuracy')
+    cv_score_mean = np.mean(cv_scores)
+    y_pred_test = rfr.predict(X_test)
+    y_out_score = accuracy_score(y_test, y_pred_test)
+    end = time.time()
+    print('In_sample_accuracy', cv_score_mean)
+    print('Out_sample_accuracy', y_out_score)
+    print('Running time', end-start)
+
+
+# In[20]:
+
+
+import matplotlib.pyplot as plt
+rfr_best = RandomForestClassifier(criterion='gini', n_estimators=30, random_state=1, n_jobs=2)
+rfr_best.fit(X_train, y_train)
+feat_labels = df.columns[1:]
+importances = rfr.feature_importances_
+indices = np.argsort(importances)[::-1]
+
+for f in range(X_train.shape[1]):
+    print("%2d) %-*s %f" % (f + 1, 30, 
+                            feat_labels[indices[f]], 
+                            importances[indices[f]]))
+
+plt.title('Feature Importance')
+plt.bar(range(X_train.shape[1]), 
+        importances[indices],
+        align='center')
+
+plt.xticks(range(X_train.shape[1]), 
+           feat_labels[indices], rotation=90)
+plt.xlim([-1, X_train.shape[1]])
+plt.tight_layout()
+plt.show()
+
+
+# In[ ]:
+
+
+
+
