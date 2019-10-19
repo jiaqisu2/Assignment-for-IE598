@@ -1,0 +1,322 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[5]:
+
+
+import pandas as pd
+Cred_df = pd.read_csv('/Users/sujiaqi/Desktop/Machine Learning/group project/MLF_GP1_CreditScore.csv')
+Cred_df = Cred_df.drop('Rating', axis = 1)
+Cred_df.head()
+
+
+# In[7]:
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+#create the scatterplot matrix
+sns.pairplot(Cred_df, height=2.5)
+plt.tight_layout()
+plt.show()
+
+
+# In[23]:
+
+
+import numpy as np
+#heat map
+cm = np.corrcoef(Cred_df.values.T)
+sns.set(font_scale=1.5)
+fig, ax = plt.subplots(figsize=(18,18)) 
+sns.heatmap(cm,
+            cbar=True,
+            annot=True,
+            square=True,
+            fmt='.2f',
+            annot_kws={'size': 5},
+            yticklabels=Cred_df.columns,
+            xticklabels=Cred_df.columns, ax=ax)
+plt.savefig('heatmap.png', dpi=300)
+plt.show()
+
+
+# In[30]:
+
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+#preprocessing
+
+X = Cred_df.iloc[:, :-1].values
+y = Cred_df['InvGrd'].values
+X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.1, random_state=1)
+#Standardize
+ss= StandardScaler()
+X_train = ss.fit_transform(X_train)
+X_test = ss.transform(X_test)
+
+
+# In[118]:
+
+
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+#Model fitting and evaluation without hyperparameters tuning
+
+#KNeighborsClassifier
+knn = KNeighborsClassifier(n_neighbors = 25, p = 2, metric = 'minkowski')
+knn.fit(X_train, y_train)
+print('KNN Test accuracy: %.3f' % knn.score(X_test, y_test))
+
+#DecisionTreeClassifier
+dt = DecisionTreeClassifier(criterion = 'gini', max_depth = 3, random_state = 1)
+dt.fit(X_train, y_train)
+print('DecisionTree Test accuracy: %.3f' % dt.score(X_test, y_test))
+
+#LogisticRegression
+lr = LogisticRegression(solver='lbfgs', random_state = 1)
+lr.fit(X_train, y_train)
+print('LogisticRegression Test accuracy: %.3f' % lr.score(X_test, y_test))
+
+#SVM
+svm = SVC(kernel = 'linear', random_state= 1)
+svm.fit(X_train, y_train)
+print('SVM Test accuracy: %.3f' % svm.score(X_test, y_test))
+
+#RandomForest
+rfr = RandomForestClassifier(criterion='gini', n_estimators=30, random_state=1, n_jobs=-1)
+rfr.fit(X_train, y_train)
+print('Randomforest Test accuracy: %.3f' % rfr.score(X_test, y_test))
+
+
+# In[45]:
+
+
+from sklearn.decomposition import PCA
+#PCA
+#PCA for all components
+pca = PCA()
+pca.fit(X_train, y_train)
+features = range(pca.n_components_)
+plt.bar(features, pca.explained_variance_ratio_)
+plt.xticks(features)
+plt.ylabel('variance')
+plt.xlabel('PCA feature')
+plt.title('Variance of All Components')
+plt.xticks(fontsize = 8)
+plt.tight_layout()
+plt.show()
+
+#PCA for 3 components
+pca_3d = PCA(n_components = 3)
+pca_3d.fit(X_train, y_train)
+features = range(pca_3d.n_components_)
+plt.bar(features, pca_3d.explained_variance_ratio_)
+plt.xticks(features)
+plt.ylabel('variance')
+plt.xlabel('PCA feature')
+plt.title('Variance of 3 Components')
+plt.xticks(fontsize = 8)
+plt.tight_layout()
+plt.show()
+
+#create X&y for 3 components
+X_train_pca, X_test_pca, y_train, y_test = train_test_split(pca_3d.transform(X), y, test_size = 0.1, random_state = 1)
+#standardize
+ss = StandardScaler()
+X_train_pca = ss.fit_transform(X_train_pca)
+X_test_pca = ss.transform(X_test_pca)
+
+
+# In[119]:
+
+
+#KNeighborsClassifier&PCA
+knn = KNeighborsClassifier(n_neighbors = 25, p = 2, metric = 'minkowski')
+knn.fit(X_train_pca, y_train)
+print('KNN&PCA Test accuracy: %.3f' % knn.score(X_test_pca, y_test))
+
+#DecisionTreeClassifier&PCA
+dt = DecisionTreeClassifier(criterion = 'gini', max_depth = 3, random_state = 1)
+dt.fit(X_train_pca, y_train)
+print('DecisionTree&PCA Test accuracy: %.3f' % dt.score(X_test_pca, y_test))
+
+#LogisticRegression&PCA
+lr = LogisticRegression(solver='lbfgs', random_state = 1)
+lr.fit(X_train_pca, y_train)
+print('LogisticRegression&PCA Test accuracy: %.3f' % lr.score(X_test_pca, y_test))
+
+#SVM&PCA
+svm = SVC(kernel = 'linear', random_state= 1)
+svm.fit(X_train_pca, y_train)
+print('SVM&PCA Test accuracy: %.3f' % svm.score(X_test_pca, y_test))
+
+#RandomForest&PCA
+rfr = RandomForestClassifier(criterion='gini', n_estimators=30, random_state=1, n_jobs=-1)
+rfr.fit(X_train_pca, y_train)
+print('Randomforest&PCA Test accuracy: %.3f' % rfr.score(X_test_pca, y_test))
+
+
+# In[69]:
+
+
+from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import make_pipeline
+
+#hyperparameters tuning
+#SVM & hyperparameters tunning
+pipe_svc = make_pipeline(StandardScaler(),
+                         SVC(random_state = 1))
+param_range = [0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]
+param_grid = [{'svc__C': param_range,
+               'svc__kernel': ['linear']},
+              {'svc__C': param_range,
+               'svc__gamma': param_range,
+               'svc__kernel': ['rbf']}]
+gs = GridSearchCV(estimator=pipe_svc,
+                  param_grid=param_grid,
+                  scoring='accuracy',
+                  cv=10,
+                  n_jobs=-1)
+gs = gs.fit(X_train, y_train)
+clf_svm = gs.best_estimator_
+clf_svm.fit(X_train, y_train)
+print('With Hyperparameters Tuning SVM Test accuracy: %.3f' % clf_svm.score(X_test, y_test))
+
+
+# In[97]:
+
+
+#Decision Tree & hyperparameters tunning
+pipe_dt = make_pipeline(StandardScaler(),
+                        DecisionTreeClassifier())
+#sorted(pipe_dt.get_params().keys())
+param_grid = {'decisiontreeclassifier__criterion': ["gini", "entropy"],
+              'decisiontreeclassifier__max_depth': [1, 2, 3],
+              'decisiontreeclassifier__max_features': range(1,11),
+              'decisiontreeclassifier__random_state': range(1,21)}
+gs = GridSearchCV(pipe_dt,
+                  param_grid=param_grid,
+                  cv=10,
+                  n_jobs=-1)
+gs = gs.fit(X_train, y_train)
+clf_dt = gs.best_estimator_
+clf_dt.fit(X_train, y_train)
+print('With Hyperparameters Tuning DecionTree Test accuracy: %.3f' % clf_dt.score(X_test, y_test))
+
+
+# In[95]:
+
+
+#KNN & hyperparameters tunning
+pipe_knn = make_pipeline(StandardScaler(),
+                         KNeighborsClassifier(p=2, metric='minkowski'))
+#sorted(pipe_knn.get_params().keys())
+param_grid = {'kneighborsclassifier__n_neighbors': range(1,5,41),
+              'kneighborsclassifier__leaf_size': range(1,21),
+              'kneighborsclassifier__weights': ['uniform', 'distance'],
+              'kneighborsclassifier__algorithm':['auto', 'ball_tree','kd_tree','brute']}
+gs = GridSearchCV(pipe_knn,
+                  param_grid=param_grid,
+                  cv=10,
+                  n_jobs=-1)
+gs = gs.fit(X_train, y_train)
+clf_knn = gs.best_estimator_
+clf_knn.fit(X_train, y_train)
+print('With Hyperparameters Tuning KNN Test accuracy: %.3f' % clf_knn.score(X_test, y_test))
+
+
+# In[124]:
+
+
+#Lr & hyperparameters tunning
+pipe_lr = make_pipeline(StandardScaler(),
+                        LogisticRegression(max_iter = 10))
+#sorted(pipe_lr.get_params().keys())
+param_grid = {'logisticregression__solver': ['liblinear', 'lbfgs', 'sag', 'saga', 'newton-cg'],
+              'logisticregression__random_state': range(1,11)}
+gs = GridSearchCV(pipe_lr,
+                  param_grid=param_grid,
+                  cv=10,
+                  n_jobs=-1)
+gs = gs.fit(X_train, y_train)
+clf_lr = gs.best_estimator_
+clf_lr.fit(X_train, y_train)
+print('With Hyperparameters Tuning LR Test accuracy: %.3f' % clf_lr.score(X_test, y_test))
+
+
+# In[109]:
+
+
+#Randomforest & hyperparameters tunning
+pipe_rfr = make_pipeline(StandardScaler(),
+                         RandomForestClassifier())
+#sorted(pipe_rfr.get_params().keys())
+param_grid = {'randomforestclassifier__criterion':['gini','entropy'],
+          'randomforestclassifier__n_estimators':[10,15,20,25,30],
+          'randomforestclassifier__min_samples_leaf':[1,2,3],
+          'randomforestclassifier__min_samples_split':[3,4,5,6,7], 
+          'randomforestclassifier__random_state':range(1,11)}
+gs = GridSearchCV(pipe_rfr,
+                  param_grid=param_grid,
+                  cv=10,
+                  n_jobs=-1)
+gs = gs.fit(X_train, y_train)
+clf_rfr = gs.best_estimator_
+clf_rfr.fit(X_train, y_train)
+print('With Hyperparameters Tuning Randomforest Test accuracy: %.3f' % clf_rfr.score(X_test, y_test))
+
+
+# In[131]:
+
+
+#boosting
+from sklearn.ensemble import AdaBoostClassifier
+ada_dt = AdaBoostClassifier(base_estimator=dt, n_estimators=180, random_state=1)
+ada_dt.fit(X_train, y_train)
+print('With boosting DecionTree Test accuracy: %.3f' % ada_dt.score(X_test, y_test))
+
+ada_lr = AdaBoostClassifier(base_estimator=lr, n_estimators=180, random_state=1)
+ada_lr.fit(X_train, y_train)
+print('With boosting LR Test accuracy: %.3f' % ada_lr.score(X_test, y_test))
+
+ada_rfr = AdaBoostClassifier(base_estimator=rfr, n_estimators=180, random_state=1)
+ada_rfr.fit(X_train, y_train)
+print('With boosting Randomforest Test accuracy: %.3f' % ada_rfr.score(X_test, y_test))
+
+
+# In[134]:
+
+
+#bagging
+from sklearn.ensemble import BaggingClassifier
+bc_dt = BaggingClassifier(base_estimator = dt , n_estimators= 50 , random_state=1)
+bc_dt.fit(X_train, y_train)
+print('With bagging DecionTree Test accuracy: %.3f' % bc_dt.score(X_test, y_test))
+
+bc_lr = BaggingClassifier(base_estimator = lr , n_estimators= 50 , random_state=1)
+bc_lr.fit(X_train, y_train)
+print('With bagging LR Test accuracy: %.3f' % bc_lr.score(X_test, y_test))
+
+bc_rfr = BaggingClassifier(base_estimator = rfr , n_estimators= 50 , random_state=1)
+bc_rfr.fit(X_train, y_train)
+print('With bagging Randomforest Test accuracy: %.3f' % bc_rfr.score(X_test, y_test))
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
